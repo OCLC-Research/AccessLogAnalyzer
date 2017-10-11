@@ -1,0 +1,4 @@
+My First Report
+<#list UsageByIP as entry>
+${entry.key}  ${entry.value}
+</#list>

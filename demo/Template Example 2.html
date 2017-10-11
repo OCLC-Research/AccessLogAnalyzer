@@ -1,0 +1,14 @@
+<html>
+	<head>
+		<title>My Second Report</title>
+	</head>
+	<body>
+		<h1>My Second Report</h1>
+		<table>
+			<tr><th>IP Address</th><th>Count</th></tr>
+			<#list UsageByIP as entry>
+				<tr><td>${entry.key}</td><td>${entry.value}</td></tr>
+			</#list>
+		</table>
+	</body>
+</html>
