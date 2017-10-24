@@ -31,7 +31,7 @@ public abstract class Analyzer implements Closeable {
     static Properties hostNames;
     static private File propertiesFile;
     private boolean closed=false;
-    public Pattern logEntryPattern = Pattern.compile("^([\\d.]+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(.+?)\" (\\d{3}) (\\d+) \"([^\"]+)\" \"([^\"]+)\"");
+    public Pattern logEntryPattern = Pattern.compile("^(?<RemoteHost>[\\d.]+) (?<Identity>\\S+) (?<UserName>\\S+) \\[(?<Time>[\\w:/]+\\s[+\\-]\\d{4})\\] \"(?<Request>.+?)\" (?<StatusCode>\\d{3}) (?<Size>\\d+) \"(?<Referer>[^\"]+)\" \"(?<UserAgent>[^\"]+)\"");
     private int lookupCount=0, maxLookups=20;
 
     public abstract void analyze(String line);
@@ -70,6 +70,13 @@ public abstract class Analyzer implements Closeable {
                     String newShortName, shortNames[], value;
                     for(String name:hostNames.stringPropertyNames()) {
                         if(name.startsWith("equivalent-")) {
+                            newShortName=name.substring(11);
+                            value=hostNames.getProperty(name);
+                            shortNames=value.split(",");
+                            for(String shortName:shortNames)
+                                EQUIVALENTS.put(shortName, newShortName);
+                        }
+                        else if(name.endsWith("-equivalent")) {
                             newShortName=name.substring(11);
                             value=hostNames.getProperty(name);
                             shortNames=value.split(",");
