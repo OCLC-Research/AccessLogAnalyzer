@@ -25,8 +25,8 @@ import java.util.regex.Pattern;
 public class UsageOverTime extends Analyzer {
 
     private int intervalSize;
-    private long max, total;
-    private long[] usage;
+    private long total;
+    private long[] notBlacklistedUsage, usage;
     private Pattern timePattern;
     private Date date;
     private boolean weekly;
@@ -48,8 +48,9 @@ public class UsageOverTime extends Analyzer {
             int hour=Integer.parseInt(m.group(1));
             int minute=Integer.parseInt(m.group(2));
             int time=hour*60+minute;
-            if((usage[time/intervalSize]=usage[time/intervalSize]+1)>max)
-                max=usage[time/intervalSize];
+            usage[time/intervalSize]=usage[time/intervalSize]+1;
+            if(!isBlacklisted())
+                notBlacklistedUsage[time/intervalSize]=notBlacklistedUsage[time/intervalSize]+1;
             total++;
         }
     }
@@ -118,6 +119,7 @@ public class UsageOverTime extends Analyzer {
         if(!m.find()) { // probably a new report
             int numIntervals = (24*60)/intervalSize;
             usage=new long[numIntervals];
+            notBlacklistedUsage=new long[numIntervals];
             return;
         }
 
@@ -129,7 +131,8 @@ public class UsageOverTime extends Analyzer {
         }
         int numIntervals = (24*60)/intervalSize;
         usage=new long[numIntervals];
-        p=Pattern.compile("<interval minute='(\\d*)'>(\\d*)</interval>");
+        notBlacklistedUsage=new long[numIntervals];
+        p=Pattern.compile("<interval minute='(\\d*)'>(\\d*)/(\\d*)</interval>");
         m=p.matcher(usageData);
         long count;
         int minute;
@@ -137,9 +140,9 @@ public class UsageOverTime extends Analyzer {
             minute=Integer.parseInt(m.group(1));
             count=Long.parseLong(m.group(2));
             usage[minute/intervalSize]=count;
-            if(count>max)
-                max=count;
             total+=count;
+            count=Long.parseLong(m.group(3));
+            notBlacklistedUsage[minute/intervalSize]=count;
         }
     }
 
@@ -169,9 +172,11 @@ public class UsageOverTime extends Analyzer {
             intervalSize=24*60;
             numIntervals= daysInYear;
         }
-        if(usage==null)
+        if(usage==null) {
             usage=new long[numIntervals];
-        p=Pattern.compile("<interval minute='(\\d*)'>(\\d*)</interval>");
+            notBlacklistedUsage=new long[numIntervals];
+        }
+        p=Pattern.compile("<interval minute='(\\d*)'>(\\d*)(?:/(\\d*))?</interval>");
         m=p.matcher(usageData);
         long count;
         int minute;
@@ -180,9 +185,11 @@ public class UsageOverTime extends Analyzer {
             total-=usage[minute/intervalSize]; // we'll add it back in on the next line
             count=Long.parseLong(m.group(2))+usage[minute/intervalSize];
             usage[minute/intervalSize]=count;
-            if(count>max)
-                max=count;
             total+=count;
+            if(m.group(3)!=null) {
+                count=Long.parseLong(m.group(3))+notBlacklistedUsage[minute/intervalSize];
+                notBlacklistedUsage[minute/intervalSize]=count;
+            }
         }
     }
 
@@ -191,6 +198,7 @@ public class UsageOverTime extends Analyzer {
         HashMap<String, Object> map=new HashMap<>();
         if(debug)System.out.println("in UsageOverTime.report()");
         map.put("usage", usage);
+        map.put("notBlacklistedUsage", notBlacklistedUsage);
         map.put("startMillis", startMillis);
         map.put("endMillis", endMillis);
         map.put("intervalSize", intervalSize);
@@ -205,7 +213,7 @@ public class UsageOverTime extends Analyzer {
         sb.append("<usageInterval>").append(intervalSize).append("</usageInterval>\n");
         for(int i=0; i<usage.length; i++) {
             if(usage[i]>0)
-                sb.append("<interval minute='").append(i*intervalSize).append("'>").append(usage[i]).append("</interval>\n");
+                sb.append("<interval minute='").append(i*intervalSize).append("'>").append(usage[i]).append('/').append(notBlacklistedUsage[i]).append("</interval>\n");
         }
         sb.append("</usageOverTime>");
         return sb.toString();
