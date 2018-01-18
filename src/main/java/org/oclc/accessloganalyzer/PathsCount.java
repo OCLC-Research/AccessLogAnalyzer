@@ -5,6 +5,8 @@
  */
 package org.oclc.accessloganalyzer;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 
 /**
@@ -14,10 +16,10 @@ import java.util.regex.Matcher;
 public class PathsCount extends CountOfThings {
 
     @Override
-    public String getThing(String line) {
+    public List<String> getThings(String line) {
         Matcher m = logEntryPattern.matcher(line);
         if(!m.find())
-            return null;
+            return NOTHING;
         String request=m.group(5);
 //        System.out.println("request: "+request);
         int firstSpace=request.indexOf(' ');
@@ -26,9 +28,8 @@ public class PathsCount extends CountOfThings {
         lastSlash=request.lastIndexOf('/', lastSlash-1);
         if(lastSlash>0) {
 //            System.out.println("firstSpace="+firstSpace+", lastSlash="+lastSlash+", returning: "+request.substring(firstSpace+1, lastSlash));
-            return request.substring(0, lastSlash);
+            return Arrays.asList(request.substring(0, lastSlash));
         }
-        return null;
+        return NOTHING;
     }
-    
 }
