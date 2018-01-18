@@ -15,14 +15,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import static org.oclc.accessloganalyzer.AccessLogAnalyzer.resetDate;
+import static org.oclc.accessloganalyzer.Analyzer.getAnalyzer;
 
 /**
  *
@@ -35,12 +35,14 @@ public class ReportConsolidator {
     SimpleDateFormat sdf=new SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss", Locale.US);
     /**
      * @param args the command line arguments
+     * @throws java.lang.Exception
      */
     public static void main(String[] args) throws Exception {
         new ReportConsolidator().run(args);
     }
     private String contentNameTemplate;
     private String reportNameTemplate;
+    private boolean debug;
     private boolean daily;
     private boolean weekly;
     private boolean monthly;
@@ -70,6 +72,7 @@ public class ReportConsolidator {
         analyzerList=analyzerList+"UsageOverTime";
         analyzerNames = analyzerList.split(",");
         contentNameTemplate=config.getString("contentNameTemplate");
+        debug=config.getBoolean("debug", false);
         String freemarkerTemplateName = config.getString("freemarkerTemplateName", "AccessLogAnalyzerTemplate.html");
         String freemarkerTemplateDirectory=".";
         int i=freemarkerTemplateName.lastIndexOf('/');
@@ -119,41 +122,45 @@ public class ReportConsolidator {
         doReport(cal, today, daily, weekly, monthly, annual, numDays, cfg.getTemplate(freemarkerTemplateName), args);
     }
 
-    void doReport(Calendar cal, Date end, boolean daily, boolean weekly, boolean monthly, boolean annual, int numDays, Template t, String[] args) throws IOException, TemplateException {
-        String reportName=new SimpleDateFormat(reportNameTemplate).format(cal.getTime());
+    public static boolean callAnalyzers(Calendar cal, boolean daily, boolean weekly,
+      boolean monthly, boolean annual, int numDays, Template t,
+      File contentDirectory, String contentNameTemplate, String[] analyzerNames, String[] args,
+      Writer writer, boolean debug) throws IOException, TemplateException {
+        int dayNumber=0;
+        boolean didSomething=false;
         HashMap<String, Object> freeMarkerMap=new HashMap<>();
-        Date start=cal.getTime();
-        freeMarkerMap.put("today", start);
-
         Analyzer[] analyzers = new Analyzer[analyzerNames.length];
         for(int i=0; i<analyzerNames.length; i++) {
+            if(debug)
+                System.out.println("in ReportConsolidator.doReport: loading analyzer "+analyzerNames[i]);
             Analyzer analyzer = getAnalyzer(analyzerNames[i]);
             analyzer.doInit(args);
             analyzers[i]=analyzer;
         }
-
-        int dayNumber=0;
-        boolean didSomething=false;
+        freeMarkerMap.put("today", cal.getTime());
         for(Date d=cal.getTime(); dayNumber<numDays; cal.add(Calendar.DAY_OF_YEAR, 1),d=cal.getTime(),dayNumber++) {
             System.out.println("content for "+d);
+            System.out.println("contentNameTemplate="+contentNameTemplate);
             String contentFileName=new SimpleDateFormat(contentNameTemplate).format(d);
 
-            File f=new File(contentFileName);
+            File f=new File(contentDirectory, contentFileName);
             if(!f.exists()) {
-                System.out.println("Nothing to report for "+d);
+//                System.out.println("File not found: "+contentFileName);
                 continue;
             }
 
             // read the content from the report to be added to the consolidation
-            String content = loadContent(new File(contentFileName));
+            String content = loadContent(f);
             // and merge it into the old data
             for(Analyzer analyzer:analyzers) {
+                if(debug)
+                    System.out.println("Calling merge for "+analyzer.getClass().getSimpleName());
                 analyzer.merge(content, dayNumber);
             }
             didSomething=true;
         }
         if(!didSomething)
-            return;
+            return false;
 
         if(daily)
             freeMarkerMap.put("daily", true);
@@ -166,18 +173,23 @@ public class ReportConsolidator {
         for(Analyzer analyzer:analyzers) {
             freeMarkerMap.put(analyzer.getClass().getSimpleName(), analyzer.report());
         }
+        t.process(freeMarkerMap, writer);
+        return true;
+    }
 
+    public void doReport(Calendar cal, Date end, boolean daily, boolean weekly, boolean monthly, boolean annual, int numDays, Template t, String[] args) throws IOException, TemplateException {
+        String reportName=new SimpleDateFormat(reportNameTemplate).format(cal.getTime());
+        Date start=cal.getTime();
         File f=new File(reportName);
         System.out.println("producing "+reportName);
-        boolean firstTime=false;
+        boolean didSomething=false, firstTime=false;
         if(!f.exists()) // first time for this report
             firstTime=true;
         try (FileWriter fw = new FileWriter(f)) {
-            t.process(freeMarkerMap, fw);
+            didSomething=callAnalyzers(cal, daily, weekly, monthly, annual, numDays, t, new File("."), contentNameTemplate, analyzerNames, args, fw, debug);
         }
-        freeMarkerMap.clear();
         
-        if(firstTime) { // if this was the first time for this period,
+        if(didSomething && firstTime) { // if this was the first time for this period,
             // then we probably need to finish off the previous period
             cal=Calendar.getInstance();
             cal.setTime(start);
@@ -203,44 +215,7 @@ public class ReportConsolidator {
         }
     }
 
-    public Analyzer getAnalyzer(String analyzerName) {
-        Class<? extends Analyzer> c;
-        Analyzer analyzer;
-        String        name=getAnalyzerClassName(analyzerName);
-
-        try {
-            c=Class.forName(name).asSubclass(Analyzer.class);
-        }
-        catch(ClassNotFoundException e) {
-            throw new IllegalArgumentException(name);
-        }
-
-        try {
-            analyzer=c.newInstance();
-        }
-        catch(InstantiationException | IllegalAccessException e) {
-            throw new IllegalArgumentException(name);
-        }
-
-        return analyzer;
-    }
-
-    private static String getAnalyzerClassName(String name) {
-        if (name.indexOf('.')<0)
-            return "org.oclc.accessloganalyzer."+name;
-
-        return name;
-    }
-
-    private int getSkipCount(String content, int defaultValue) {
-        Pattern p = Pattern.compile("<skipLineCount>(.*?)</skipLineCount>");
-        Matcher m=p.matcher(content);
-        if(m.find())
-            return Integer.parseInt(m.group(1));
-        return defaultValue;
-    }
-
-    private String loadContent(File f) throws IOException {
+    static private String loadContent(File f) throws IOException {
         boolean justReadContent;
         BufferedReader br=new BufferedReader(new FileReader(f));
         String line;
