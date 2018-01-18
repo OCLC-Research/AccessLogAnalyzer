@@ -8,14 +8,11 @@ package org.oclc.accessloganalyzer;
 import ORG.oclc.os.JSAP.SimplerJSAP;
 import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,20 +22,26 @@ import java.util.regex.Pattern;
  */
 public abstract class CountOfThings extends Analyzer {
 
-    HashMap<String, Long> things=new HashMap<>();
+    Counter<String> things=new Counter<>();
+    Counter<String> notBlacklistedThings=new Counter<>();
     boolean debug;
 
-    public abstract String getThing(String line);
+    public abstract List<String> getThings(String line);
 
     @Override
     public void analyze(String line) {
-        String thing=getThing(line);
-        if(thing!=null) {
-            Long val=things.get(thing);
-            if(val==null)
-                val=0L;
-            things.put(thing, val+1);
+        for(String thing:getThings(line)) {
+            thing=cleanThing(thing);
+            things.increment(thing);
+            if(!isBlacklisted())
+                notBlacklistedThings.increment(thing);
         }
+    }
+
+    static public String cleanThing(String thing) {
+        // escape quotes and backslashes.
+        // throw away control characters
+        return thing.replaceAll(" ", "+");
     }
 
     @Override
@@ -66,59 +69,43 @@ public abstract class CountOfThings extends Analyzer {
             return;
         }
         String usageData = m.group(1);
-        p=Pattern.compile("<thing name='([^']*)'>(\\d+)</thing>");
+        p=Pattern.compile("<thing name='([^']*)'>(\\d+)/(\\d+)</thing>");
         m=p.matcher(usageData);
         long val;
-        Long oldVal;
         while(m.find()) {
             String thing=m.group(1);
             val=Long.parseLong(m.group(2));
-            oldVal=things.get(thing);
-            if(oldVal==null)
-                oldVal=0L;
-            things.put(thing, oldVal+val);
+            things.increment(thing, val);
+            val=Long.parseLong(m.group(3));
+            if(val>0)
+                notBlacklistedThings.increment(thing, val);
         }
     }
 
     @Override
     public Object report() {
-        ArrayList<AbstractMap.SimpleEntry<String,Long>> list=new ArrayList<>();
-        ValueComparator bvc=new ValueComparator(things);
-        TreeMap<String, Long> sortedThings=new TreeMap<>(Collections.reverseOrder(bvc));
-        sortedThings.putAll(things);
-        for(String thing:sortedThings.keySet())
-            list.add(new AbstractMap.SimpleEntry<>(thing, sortedThings.get(thing)));
-        
-        return list;
+        HashMap<String, Object> map=new HashMap<>();
+        map.put("things", things.most_common());
+        map.put("notBlacklistedThings", notBlacklistedThings.most_common());
+        return map;
     }
 
     @Override
     public String unload() {
-        ValueComparator bvc=new ValueComparator(things);
-        TreeMap<String, Long> sortedThings=new TreeMap<>(Collections.reverseOrder(bvc));
-        sortedThings.putAll(things);
+        int notBlacklistedCount=0;
+        List<Map.Entry<String, Long>> most_common = things.most_common();
+        Long notBlacklistedValue;
         StringBuilder sb=new StringBuilder("<"+this.getClass().getSimpleName()+">\n");
-        for(String thing:sortedThings.keySet()) {
-            sb.append("<thing name='").append(thing).append("'>").append(sortedThings.get(thing)).append("</thing>\n");
+        for(Map.Entry<String, Long> entry:most_common) {
+            notBlacklistedValue=notBlacklistedThings.get(entry.getKey());
+            if(notBlacklistedValue==null)
+                notBlacklistedValue=0L;
+            else
+                if(notBlacklistedCount++==100)
+                    break;
+            sb.append("<thing name='").append(entry.getKey()).append("'>").append(entry.getValue()).append('/').append(notBlacklistedValue).append("</thing>\n");
         }
         sb.append("</").append(this.getClass().getSimpleName()).append(">");
         return sb.toString();
     }
-
-    class ValueComparator implements Comparator<String> {
-
-        private final Map<String, Long> map;
-
-        public ValueComparator(Map<String, Long> map) {
-            this.map=map;
-        }
-        
-        @Override
-        public int compare(String a, String b) {
-            if(map.get(a).equals(map.get(b)))
-                return a.compareTo(b);
-            return (int)(map.get(a)-map.get(b));
-        }
-    }
-    
 }
