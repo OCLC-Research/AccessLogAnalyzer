@@ -41,6 +41,7 @@ public class AccessLogAnalyzer {
     HashMap<Long, HashMap<String, Integer>> ipMap=new HashMap<>();
     /**
      * @param args the command line arguments
+     * @throws java.lang.Exception
      */
     public static void main(String[] args) throws Exception {
         new AccessLogAnalyzer().run(args);
@@ -206,9 +207,10 @@ public class AccessLogAnalyzer {
                 br.readLine();
             if(debug)System.out.println("reading remainder of log");
             int readCount=0;
-            while((line=br.readLine())!=null) {
+            while((line=br.readLine())!=null) { // read the log and call the analyzer
                 skipCount++;
                 readCount++;
+                Analyzer.setBlacklisted(line);
                 for(Analyzer analyzer:analyzers) {
                     analyzer.analyze(line);
                 }
