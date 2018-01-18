@@ -5,6 +5,8 @@
  */
 package org.oclc.accessloganalyzer;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 
 /**
@@ -16,55 +18,54 @@ public class ClassifyGetTypeByIP extends CountOfThingsByIP {
     static final String MANDATORY_START="GET /classify2/Classify";
 
     @Override
-    public String getThing(String line) {
+    public List<String> getThings(String line) {
         Matcher m = logEntryPattern.matcher(line);
         if(!m.find())
-            return null;
+            return NOTHING;
         String statusCode=m.group(6);
         if(!"200".equals(statusCode))
-            return null;
+            return NOTHING;
         String request=m.group(5);
         if(!request.startsWith(MANDATORY_START))
-            return null;
+            return NOTHING;
         request=request.substring(MANDATORY_START.length());
         if(request.contains("ident="))
-            return "ident";
+            return Arrays.asList("ident");
         if(request.contains("oclc="))
-            return "oclc";
+            return Arrays.asList("oclc");
         if(request.contains("owi="))
-            return "owi";
+            return Arrays.asList("owi");
         if(request.contains("wi="))
-            return "wi";
+            return Arrays.asList("wi");
         if(request.contains("swid="))
-            return "swid";
+            return Arrays.asList("swid");
         if(request.startsWith("Demo")) {
             if(request.contains("search-title-txt"))
-                return "title";
+                return Arrays.asList("title");
             if(request.contains("search-author-txt"))
-                return "author";
+                return Arrays.asList("author");
             if(request.contains("search-standnum-txt"))
-                return "stdnbr";
+                return Arrays.asList("stdnbr");
             if(request.contains("search-subhead-txt"))
-                return "heading";
-            return "otherDemo";
+                return Arrays.asList("heading");
+            return Arrays.asList("otherDemo");
         }
         if(request.contains("title="))
-            return "title";
+            return Arrays.asList("title");
         if(request.contains("author="))
-            return "author";
+            return Arrays.asList("author");
         if(request.contains("stdnbr="))
-            return "stdnbr";
+            return Arrays.asList("stdnbr");
         if(request.contains("heading="))
-            return "heading";
+            return Arrays.asList("heading");
         if(request.contains("isbn="))
-            return "isbn";
+            return Arrays.asList("isbn");
         if(request.contains("issn="))
-            return "issn";
+            return Arrays.asList("issn");
         if(request.contains("upc="))
-            return "upc";
+            return Arrays.asList("upc");
         if(request.contains("lccn="))
-            return "lccn";
-        return "other";
+            return Arrays.asList("lccn");
+        return Arrays.asList("other");
     }
-    
 }
