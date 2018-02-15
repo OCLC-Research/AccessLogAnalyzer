@@ -173,6 +173,9 @@ public class ReportConsolidator {
         for(Analyzer analyzer:analyzers) {
             freeMarkerMap.put(analyzer.getClass().getSimpleName(), analyzer.report());
         }
+        for(Analyzer analyzer:analyzers) {
+            analyzer.close();
+        }
         t.process(freeMarkerMap, writer);
         return true;
     }
@@ -182,7 +185,7 @@ public class ReportConsolidator {
         Date start=cal.getTime();
         File f=new File(reportName);
         System.out.println("producing "+reportName);
-        boolean didSomething=false, firstTime=false;
+        boolean didSomething, firstTime=false;
         if(!f.exists()) // first time for this report
             firstTime=true;
         try (FileWriter fw = new FileWriter(f)) {
