@@ -324,6 +324,8 @@ public abstract class Analyzer implements Closeable {
         BufferedReader br=new BufferedReader(reader);
         String line;
         while((line=br.readLine())!=null) {
+            if(line.startsWith("#"))
+                continue;
             spiders.add(line);
         }
     }
