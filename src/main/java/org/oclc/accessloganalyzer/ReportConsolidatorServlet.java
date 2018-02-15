@@ -96,7 +96,9 @@ public class ReportConsolidatorServlet extends HttpServlet {
             String hostNames=request.getParameter("hostNames");
             if(hostNames!=null) {
                 Analyzer.hostNames=new Properties();
-                Analyzer.hostNames.load(new FileReader(getServletContext().getRealPath(hostNames)));
+                Analyzer.propertiesFile=new File(getServletContext().getRealPath(hostNames));
+                Analyzer.closed=false;
+                Analyzer.hostNames.load(new FileReader(Analyzer.propertiesFile));
             }
             String equivalents=request.getParameter("ipEquivalents");
             if(equivalents!=null)
