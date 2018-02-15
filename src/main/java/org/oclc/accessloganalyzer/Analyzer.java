@@ -305,7 +305,7 @@ public abstract class Analyzer implements Closeable {
         BufferedReader br=new BufferedReader(file);
         String line;
         while((line=br.readLine())!=null) {
-            if(line.isEmpty() || line.startsWith("//"))
+            if(line.isEmpty() || line.startsWith("//") || line.startsWith("#"))
                 continue;
             if(line.contains("-equivalent"))
                 addAddresses(line, EQUIVALENT_ADDRESSES);
@@ -324,7 +324,7 @@ public abstract class Analyzer implements Closeable {
         BufferedReader br=new BufferedReader(reader);
         String line;
         while((line=br.readLine())!=null) {
-            if(line.startsWith("#"))
+            if(line.isEmpty() || line.startsWith("//") || line.startsWith("#"))
                 continue;
             spiders.add(line);
         }
