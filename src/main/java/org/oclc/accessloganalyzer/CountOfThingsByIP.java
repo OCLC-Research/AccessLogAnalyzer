@@ -29,7 +29,7 @@ public abstract class CountOfThingsByIP extends Analyzer {
     Counter<String> notBlacklistedLongCounts=new Counter<>();
     Counter<String> shortCounts=new Counter<>();
     Counter<String> notBlacklistedShortCounts=new Counter<>();
-    HashMap<String, Counter<String>> longAddrs=new HashMap<>();
+    public HashMap<String, Counter<String>> longAddrs=new HashMap<>();
     HashMap<String, Counter<String>> shortAddrs=new HashMap<>();
     HashMap<String, Counter<String>> notBlacklistedLongAddrs=new HashMap<>();
     HashMap<String, Counter<String>> notBlacklistedShortAddrs=new HashMap<>();
