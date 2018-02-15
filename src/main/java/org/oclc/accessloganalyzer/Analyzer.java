@@ -41,8 +41,8 @@ public abstract class Analyzer implements Closeable {
     static HashSet<String> blacklistedIPs=new HashSet<>();
     static public Properties hostNames;
     static public File propertiesFile;
-    static private boolean closed=false;
-    static public Pattern logEntryPattern = Pattern.compile("^(?<RemoteHost>[\\d.]+) (?<Identity>\\S+) (?<UserName>\\S+) \\[(?<Time>[\\w:/]+\\s[+\\-]\\d{4})\\] \"(GET|PUT|POST|HEAD) (?<Request>.+?) HTTP/\\d\\.\\d\" (?<StatusCode>\\d{3}) (?<Size>[\\d-]+) \"(?<Referer>[^\"]+)\" \"(?<UserAgent>[^\"]+)\"");
+    static public boolean closed=false;
+    static public Pattern logEntryPattern = Pattern.compile("^(?<RemoteHost>[\\d.]+) (?<Identity>\\S+) (?<UserName>\\S+) \\[(?<Time>[\\w:/]+\\s[+\\-]\\d{4})\\] \"(?<Method>\\S+) (?<Request>.+?) HTTP/\\d\\.\\d\" (?<StatusCode>\\d{3}) (?<Size>[\\d-]+) \"(?<Referer>[^\"]+)\" \"(?<UserAgent>[^\"]+)\"");
     int lookupCount=0, maxLookups=20;
     static boolean blacklisted;
     static private String cacheRequest, cacheResponse;
