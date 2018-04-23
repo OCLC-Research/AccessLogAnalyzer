@@ -156,14 +156,14 @@ public abstract class Analyzer implements Closeable {
             c=Class.forName(name).asSubclass(Analyzer.class);
         }
         catch(ClassNotFoundException e) {
-            throw new IllegalArgumentException(name);
+            throw new IllegalArgumentException(name, e);
         }
 
         try {
             analyzer=c.newInstance();
         }
         catch(InstantiationException | IllegalAccessException e) {
-            throw new IllegalArgumentException(name);
+            throw new IllegalArgumentException(name, e);
         }
 
         return analyzer;
