@@ -39,6 +39,7 @@ public abstract class Analyzer implements Closeable {
     static final HashMap<String, String> IDENTICAL_ADDRESSES=new HashMap<>();
     static HashSet<String> spiders=new HashSet<>();
     static HashSet<String> blacklistedIPs=new HashSet<>();
+    static public HashMap<String, Object> storageLocker=new HashMap<>();
     static public Properties hostNames;
     static public File propertiesFile;
     static public boolean closed=false;
