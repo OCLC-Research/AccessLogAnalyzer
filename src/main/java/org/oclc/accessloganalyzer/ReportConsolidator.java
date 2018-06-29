@@ -51,7 +51,7 @@ public class ReportConsolidator {
 
     public void run(String[] args) throws Exception {
         SimplerJSAP jsap = new SimplerJSAP(
-          "--reportNameTemplate<> --contentNameTemplate<> [--freemarkerTemplateDirectory<File>] [--freemarkerTemplateName<>] [--analyzers<>] [--date<>] [--daily] [--weekly] [--week] [--monthly] [--month] [--annual] [--year] [--debug]");
+          "--reportNameTemplate<> --contentNameTemplate<> [--freemarkerTemplateName<>] [--analyzers<>] [--date<>] [--daily] [--weekly] [--week] [--monthly] [--month] [--annual] [--year] [--debug]");
         JSAPResult config = jsap.parse(args);
         Date today=new Date();
         String date = config.getString("date", null);
