@@ -8,7 +8,6 @@ package org.oclc.accessloganalyzer;
 import ORG.oclc.os.JSAP.SimplerJSAP;
 import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
