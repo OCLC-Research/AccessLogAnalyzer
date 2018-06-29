@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
+import org.anarres.lzo.LzopInputStream;
 
 /**
  *
@@ -58,7 +59,7 @@ public class AccessLogAnalyzer {
     public void run(String[] args) throws Exception {
         Date today=new Date();
         SimplerJSAP jsap = new SimplerJSAP(
-          "[--logNameTemplate<>] [--remoteLogNameTemplate<>] [--todaysRemoteLogNameTemplate<>] [--freemarkerTemplateName<>] [--reportNameTemplate<>] --contentNameTemplate<> [--date<>] [--hostname<>] [--analyzers<>] [--maxDaysToProcess<int>] [--debug]");
+          "[--logNameTemplate<>] [--remoteLogNameTemplate<>] [--todaysRemoteLogNameTemplate<>] [--freemarkerTemplateName<>] [--reportNameTemplate<>] --contentNameTemplate<> [--date<>] [--hostname<>] [--analyzers<>] [--maxDaysToProcess<int>] [--maxRecordsPerDay<int>] [--debug]");
         JSAPResult config = jsap.parse(args);
         debug=config.getBoolean("debug", false);
         String date = config.getString("date", null);
@@ -73,6 +74,7 @@ public class AccessLogAnalyzer {
                 today=new Date(new SimpleDateFormat("yyyyMMdd").parse(date).getTime());
         }
         maxDaysToProcess=config.getInt("maxDaysToProcess", Integer.MAX_VALUE);
+        int maxRecordsPerDay=config.getInt("maxRecordsPerDay", Integer.MAX_VALUE);
 
         String analyzerList=config.getString("analyzers", "");
         if(!analyzerList.isEmpty())
@@ -101,10 +103,10 @@ public class AccessLogAnalyzer {
         cfg.setLogTemplateExceptions(false);
         Template t=cfg.getTemplate(freemarkerTemplateName);
 
-        doReport(today, t, analyzerNames, args, 0);
+        doReport(today, t, analyzerNames, args, 0, maxRecordsPerDay);
     }
     
-    private void doReport(Date date, Template template, String[] analyzerNames, String[] args, int recursionDepth) throws IOException, TemplateException {
+    private void doReport(Date date, Template template, String[] analyzerNames, String[] args, int recursionDepth, int maxCount) throws IOException, TemplateException {
         System.out.println("report for "+date);
         if(recursionDepth>=maxDaysToProcess)
             return;
@@ -118,28 +120,33 @@ public class AccessLogAnalyzer {
             if(!f.exists()) {
                 f=new File(todaysLog+".gz");
                 if(!f.exists()) {
-                    if(remoteLogNameTemplate!=null) {
-                        SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd");
-                        if(todaysRemoteLogNameTemplate!=null && sdf.format(new Date()).equals(sdf.format(date))) {
-                            String todaysRemoteLogName=new SimpleDateFormat(todaysRemoteLogNameTemplate).format(date);
-                            if(!getLog(todaysRemoteLogName, todaysLog, date)) {
-                                System.out.println("Nothing to report");
-                                return;
-                            }
-                        }
-                        else {
-                            String remoteLogName=new SimpleDateFormat(remoteLogNameTemplate).format(date);
-                            if(!getLog(remoteLogName, todaysLog, date)) { // try gzipped
-                                if(!getLog(remoteLogName+".gz", todaysLog, date)) {
+                    f=new File(todaysLog+".lzo");
+                    if(!f.exists()) {
+                        if(remoteLogNameTemplate!=null) {
+                            SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd");
+                            if(todaysRemoteLogNameTemplate!=null && sdf.format(new Date()).equals(sdf.format(date))) {
+                                String todaysRemoteLogName=new SimpleDateFormat(todaysRemoteLogNameTemplate).format(date);
+                                if(!getLog(todaysRemoteLogName, todaysLog, date)) {
                                     System.out.println("Nothing to report");
                                     return;
                                 }
                             }
+                            else {
+                                String remoteLogName=new SimpleDateFormat(remoteLogNameTemplate).format(date);
+                                if(!getLog(remoteLogName, todaysLog, date)) { // try gzipped
+                                    if(!getLog(remoteLogName+".gz", todaysLog, date)) {
+                                        if(!getLog(remoteLogName+".lzo", todaysLog, date)) {
+                                            System.out.println("Nothing to report");
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    }
-                    else {
-                        System.out.println("Nothing to report");
-                        return;
+                        else {
+                            System.out.println("Nothing to report");
+                            return;
+                        }
                     }
                 }
             }
@@ -210,6 +217,8 @@ public class AccessLogAnalyzer {
             while((line=br.readLine())!=null) { // read the log and call the analyzer
                 skipCount++;
                 readCount++;
+                if(readCount>maxCount)
+                    break;
                 Analyzer.setBlacklisted(line);
                 for(Analyzer analyzer:analyzers) {
                     analyzer.analyze(line);
@@ -265,7 +274,7 @@ public class AccessLogAnalyzer {
                 cal.add(Calendar.DATE, -1);
                 args=resetDate(cal, args);
                 try {
-                    doReport(cal.getTime(), template, analyzerNames, args, recursionDepth+1);
+                    doReport(cal.getTime(), template, analyzerNames, args, recursionDepth+1, maxCount);
                 } catch (FileNotFoundException ex) {
                     System.out.println("Nothing to finish: "+ex.getMessage());
                 }
@@ -341,14 +350,20 @@ public class AccessLogAnalyzer {
     }
     
     static public BufferedReader openReader(String filename) throws FileNotFoundException, IOException {
+//        System.out.println("looking for file: "+filename);
         File f=new File(filename);
-        if(!f.exists()) { // let's see if there's a .gz version of the file
-            f=new File(filename+".gz");
-            if(!f.exists())
-                throw new FileNotFoundException(filename);
+        if(f.exists())
+            return new BufferedReader(new FileReader(f));
+//        System.out.println("looking for file: "+filename+".gz");
+        f=new File(filename+".gz");
+        if(f.exists())
             return new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-        }
-        return new BufferedReader(new FileReader(f));
+//        System.out.println("looking for file: "+filename+".lzo");
+        f=new File(filename+".lzo");
+        if(f.exists())
+            return new BufferedReader(new InputStreamReader(new LzopInputStream(new FileInputStream(f))));
+//        System.out.println("file not found: "+filename);
+        throw new FileNotFoundException(filename);
     }
 
     static public String[] resetDate(Calendar cal, String[] args) {
