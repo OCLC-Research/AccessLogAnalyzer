@@ -24,9 +24,9 @@ import java.util.regex.Pattern;
  */
 public class UsageOverTime extends Analyzer {
 
-    private int intervalSize;
-    private long total;
-    private long[] notBlacklistedUsage, usage;
+    protected int intervalSize;
+    protected long total;
+    protected long[] notBlacklistedUsage, usage;
     private Pattern timePattern;
     private Date date;
     private boolean weekly;
@@ -108,7 +108,8 @@ public class UsageOverTime extends Analyzer {
         cal.add(calendarUnit, 1); // end of week, month, year
         endMillis=cal.getTime().getTime();
         end=new SimpleDateFormat("yyyyMMdd").format(cal.getTime());
-        System.out.println("date="+date+", start="+start+", end="+end);
+        if(debug)
+            System.out.println("in UsageOverTime.init: date="+date+", start="+start+", end="+end);
     }
 
     @Override
