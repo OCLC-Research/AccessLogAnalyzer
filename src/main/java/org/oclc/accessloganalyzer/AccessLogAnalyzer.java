@@ -20,6 +20,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
@@ -27,6 +28,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -59,7 +61,7 @@ public class AccessLogAnalyzer {
     public void run(String[] args) throws Exception {
         Date today=new Date();
         SimplerJSAP jsap = new SimplerJSAP(
-          "[--logNameTemplate<>] [--remoteLogNameTemplate<>] [--todaysRemoteLogNameTemplate<>] [--freemarkerTemplateName<>] [--reportNameTemplate<>] --contentNameTemplate<> [--date<>] [--hostname<>] [--analyzers<>] [--maxDaysToProcess<int>] [--maxRecordsPerDay<int>] [--debug]");
+          "[--logNameTemplate<>] [--remoteLogNameTemplate<>] [--todaysRemoteLogNameTemplate<>] [--freemarkerTemplateName<>] [--reportNameTemplate<>] --contentNameTemplate<> [--date<>] [--hostname<>] [--analyzers<>] [--maxDaysToProcess<int>] [--maxRecordsPerDay<int>] [--numLinesToBuffer<int>] [--comparatorName<>] [--debug]");
         JSAPResult config = jsap.parse(args);
         debug=config.getBoolean("debug", false);
         String date = config.getString("date", null);
@@ -75,6 +77,7 @@ public class AccessLogAnalyzer {
         }
         maxDaysToProcess=config.getInt("maxDaysToProcess", Integer.MAX_VALUE);
         int maxRecordsPerDay=config.getInt("maxRecordsPerDay", Integer.MAX_VALUE);
+        int numLinesToBuffer=config.getInt("numLinesToBuffer", 0);
 
         String analyzerList=config.getString("analyzers", "");
         if(!analyzerList.isEmpty())
@@ -102,11 +105,18 @@ public class AccessLogAnalyzer {
         cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
         cfg.setLogTemplateExceptions(false);
         Template t=cfg.getTemplate(freemarkerTemplateName);
+        
+        Comparator<String> comparator=null;
+        String comparatorName=config.getString("comparatorName", null);
+        if(comparatorName!=null)
+            comparator=getComparator(comparatorName);
 
-        doReport(today, t, analyzerNames, args, 0, maxRecordsPerDay);
+        doReport(today, t, analyzerNames, args, 0, maxRecordsPerDay, numLinesToBuffer, comparator);
     }
     
-    private void doReport(Date date, Template template, String[] analyzerNames, String[] args, int recursionDepth, int maxCount) throws IOException, TemplateException {
+    private void doReport(Date date, Template template, String[] analyzerNames,
+            String[] args, int recursionDepth, int maxCount,
+            int numLinesToBuffer, Comparator<String> comparator) throws IOException, TemplateException {
         System.out.println("report for "+date);
         if(recursionDepth>=maxDaysToProcess)
             return;
@@ -208,7 +218,7 @@ public class AccessLogAnalyzer {
 
         if(todaysLog!=null) {
             System.out.println("skipping "+skipCount+" lines from file "+todaysLog);
-            BufferedReader br=openReader(todaysLog);
+            BufferedReader br=openReader(todaysLog, numLinesToBuffer, comparator);
             String line;
             for(int i=0; i<skipCount; i++)
                 br.readLine();
@@ -274,7 +284,8 @@ public class AccessLogAnalyzer {
                 cal.add(Calendar.DATE, -1);
                 args=resetDate(cal, args);
                 try {
-                    doReport(cal.getTime(), template, analyzerNames, args, recursionDepth+1, maxCount);
+                    doReport(cal.getTime(), template, analyzerNames, args,
+                            recursionDepth+1, maxCount, numLinesToBuffer, comparator);
                 } catch (FileNotFoundException ex) {
                     System.out.println("Nothing to finish: "+ex.getMessage());
                 }
@@ -305,6 +316,35 @@ public class AccessLogAnalyzer {
     }
 
     private static String getAnalyzerClassName(String name) {
+        if (name.indexOf('.')<0)
+            return "org.oclc.accessloganalyzer."+name;
+
+        return name;
+    }
+
+    public Comparator<String> getComparator(String comparatorName) {
+        Class<? extends Comparator<String>> c;
+        Comparator<String> comparator;
+        String        name=getComparatorClassName(comparatorName);
+
+        try {
+            c=Class.forName(name).asSubclass(Comparator.class);
+        }
+        catch(ClassNotFoundException e) {
+            throw new IllegalArgumentException(name);
+        }
+
+        try {
+            comparator=c.newInstance();
+        }
+        catch(InstantiationException | IllegalAccessException e) {
+            throw new IllegalArgumentException(name);
+        }
+
+        return comparator;
+    }
+
+    private static String getComparatorClassName(String name) {
         if (name.indexOf('.')<0)
             return "org.oclc.accessloganalyzer."+name;
 
@@ -349,20 +389,27 @@ public class AccessLogAnalyzer {
         return returnVal;
     }
     
-    static public BufferedReader openReader(String filename) throws FileNotFoundException, IOException {
-//        System.out.println("looking for file: "+filename);
+    static public BufferedReader openReader(String filename, int numLinesToBuffer,
+            Comparator<String> comparator) throws FileNotFoundException, IOException {
+        Reader reader=null;
         File f=new File(filename);
         if(f.exists())
-            return new BufferedReader(new FileReader(f));
-//        System.out.println("looking for file: "+filename+".gz");
-        f=new File(filename+".gz");
-        if(f.exists())
-            return new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-//        System.out.println("looking for file: "+filename+".lzo");
-        f=new File(filename+".lzo");
-        if(f.exists())
-            return new BufferedReader(new InputStreamReader(new LzopInputStream(new FileInputStream(f))));
-//        System.out.println("file not found: "+filename);
+            reader= new FileReader(f);
+        else {
+            f=new File(filename+".gz");
+            if(f.exists())
+                reader= new InputStreamReader(new GZIPInputStream(new FileInputStream(f)));
+            else {
+                f=new File(filename+".lzo");
+                if(f.exists())
+                    reader= new InputStreamReader(new LzopInputStream(new FileInputStream(f)));
+            }
+        }
+        if(reader!=null)
+            if(numLinesToBuffer>0)
+                return new SortedBufferedReader(reader, numLinesToBuffer, comparator);
+            else
+                return new BufferedReader(reader);
         throw new FileNotFoundException(filename);
     }
 
