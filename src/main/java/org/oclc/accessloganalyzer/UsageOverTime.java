@@ -115,7 +115,7 @@ public class UsageOverTime extends Analyzer {
     @Override
     public void load(String content, Date date) {
         this.date=date;
-        Pattern p = Pattern.compile("<usageOverTime>(.*?)</usageOverTime>", Pattern.DOTALL);
+        Pattern p = Pattern.compile("<"+this.getClass().getSimpleName()+">(.*?)</"+this.getClass().getSimpleName()+">", Pattern.DOTALL);
         Matcher m=p.matcher(content);
         if(!m.find()) { // probably a new report
             int numIntervals = (24*60)/intervalSize;
@@ -149,7 +149,7 @@ public class UsageOverTime extends Analyzer {
 
     @Override
     public void merge(String content, int dayNumber) {
-        Pattern p = Pattern.compile("<usageOverTime>(.*?)</usageOverTime>", Pattern.DOTALL);
+        Pattern p = Pattern.compile("<"+this.getClass().getSimpleName()+">(.*?)</"+this.getClass().getSimpleName()+">", Pattern.DOTALL);
         Matcher m=p.matcher(content);
         if(!m.find()) { // probably a new report
             return;
@@ -210,13 +210,13 @@ public class UsageOverTime extends Analyzer {
 
     @Override
     public String unload() {
-        StringBuilder sb=new StringBuilder("<usageOverTime>\n");
+        StringBuilder sb=new StringBuilder("<"+this.getClass().getSimpleName()+">\n");
         sb.append("<usageInterval>").append(intervalSize).append("</usageInterval>\n");
         for(int i=0; i<usage.length; i++) {
             if(usage[i]>0)
                 sb.append("<interval minute='").append(i*intervalSize).append("'>").append(usage[i]).append('/').append(notBlacklistedUsage[i]).append("</interval>\n");
         }
-        sb.append("</usageOverTime>");
+        sb.append("</").append(this.getClass().getSimpleName()).append(">");
         return sb.toString();
     }
 }
