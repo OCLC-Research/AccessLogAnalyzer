@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  *
@@ -55,6 +56,14 @@ public class Counter<T extends Comparable<T>> extends TreeMap<T, Long> {
         if(list.size()<=numEntriesReturned)
             return list;
         return list.subList(0, numEntriesReturned);
+    }
+
+    public String toXML() {
+        StringBuilder sb=new StringBuilder();
+        for(Map.Entry<T, Long> entry:most_common()) {
+            sb.append("<").append(StringEscapeUtils.escapeXml10(entry.getKey().toString())).append(">").append(entry.getValue()).append("</").append(entry.getKey().toString()).append(">");
+        }
+        return sb.toString();
     }
 
     public void update(Counter<T> counter) {
