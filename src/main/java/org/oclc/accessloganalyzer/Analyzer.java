@@ -50,12 +50,14 @@ public abstract class Analyzer implements Closeable {
     static final ArrayList<String> NOTHING=new ArrayList<>();
     private static final int[] LIST256;
 
+    public HashMap<String, String> extraAbstractions=new HashMap<>();
+
     public abstract void analyze(String line);
-    public abstract void init(String[] args);
+    public abstract void init(String[] args) throws Exception;
     public abstract void load(String content, Date date);
     public abstract void merge(String content, int dayNumber);
     public abstract Object report();
-    public abstract String unload();
+    public abstract String unload() throws Exception;
 
     static {
         LIST256=new int[256];
@@ -88,7 +90,7 @@ public abstract class Analyzer implements Closeable {
         closed=true;
     }
 
-    public void doInit(String[] args) throws FileNotFoundException, IOException {
+    public void doInit(String[] args) throws Exception {
         SimplerJSAP jsap;
         try {
             jsap = new SimplerJSAP(
