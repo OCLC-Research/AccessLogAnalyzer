@@ -8,7 +8,6 @@ import ORG.oclc.os.JSAP.SimplerJSAP;
 import com.martiansoftware.jsap.JSAPResult;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 import java.io.BufferedReader;
 import java.io.File;
@@ -116,7 +115,7 @@ public class AccessLogAnalyzer {
     
     private void doReport(Date date, Template template, String[] analyzerNames,
             String[] args, int recursionDepth, int maxCount,
-            int numLinesToBuffer, Comparator<String> comparator) throws IOException, TemplateException {
+            int numLinesToBuffer, Comparator<String> comparator) throws Exception {
         System.out.println("report for "+date);
         if(recursionDepth>=maxDaysToProcess)
             return;
@@ -247,6 +246,11 @@ public class AccessLogAnalyzer {
                     StringBuilder sb=new StringBuilder();
                     for(Analyzer analyzer:analyzers) {
                         sb.append(analyzer.unload()).append('\n');
+                        for(String name:analyzer.extraAbstractions.keySet()) {
+                            try (FileWriter fw2 = new FileWriter(todaysContent+"."+name)) {
+                                fw2.write(analyzer.extraAbstractions.get(name));
+                            }
+                        }
                     }
                     fw.write("<script type='xmlContent'>\n");
                     fw.write(sb.toString());
