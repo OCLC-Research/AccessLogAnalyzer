@@ -7,12 +7,10 @@ package org.oclc.accessloganalyzer;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -114,7 +112,7 @@ public class ReportConsolidatorServlet extends HttpServlet {
             callAnalyzers(cal, daily, weekly, monthly, annual, numDays, t,
               contentDirectory, contentNameTemplate, analyzers.split(","), args.split(","),
               response.getWriter(), debug);
-        } catch (ParseException | TemplateException ex) {
+        } catch (Exception ex) {
             throw new ServletException(ex);
         }
     }
