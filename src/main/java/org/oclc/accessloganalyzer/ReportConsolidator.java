@@ -125,7 +125,7 @@ public class ReportConsolidator {
     public static boolean callAnalyzers(Calendar cal, boolean daily, boolean weekly,
       boolean monthly, boolean annual, int numDays, Template t,
       File contentDirectory, String contentNameTemplate, String[] analyzerNames, String[] args,
-      Writer writer, boolean debug) throws IOException, TemplateException {
+      Writer writer, boolean debug) throws Exception {
         int dayNumber=0;
         boolean didSomething=false;
         HashMap<String, Object> freeMarkerMap=new HashMap<>();
@@ -180,7 +180,9 @@ public class ReportConsolidator {
         return true;
     }
 
-    public void doReport(Calendar cal, Date end, boolean daily, boolean weekly, boolean monthly, boolean annual, int numDays, Template t, String[] args) throws IOException, TemplateException {
+    public void doReport(Calendar cal, Date end, boolean daily, boolean weekly,
+            boolean monthly, boolean annual, int numDays, Template t,
+            String[] args) throws Exception {
         String reportName=new SimpleDateFormat(reportNameTemplate).format(cal.getTime());
         Date start=cal.getTime();
         File f=new File(reportName);
