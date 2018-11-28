@@ -37,22 +37,22 @@ public abstract class CountOfThingsByIP extends Analyzer {
     boolean debug;
     int maxThings=20;
     long otherCount;
-    private boolean debugGetIPData, dontConflateIPs;
+    boolean debugGetIPData, dontConflateIPs;
 
     public abstract List<String> getThings(String line);
     
     @Override
     public void analyze(String line) {
+        String ipAddr = line.substring(0, line.indexOf(' '));
+        if(ipAddr.contains(",")) // host and proxy.  Just use host
+            ipAddr=ipAddr.substring(0, ipAddr.indexOf(','));
+        if(!ipAddr.contains("."))
+            return;  // no IP address
+        if(!dontConflateIPs)
+            ipAddr=getIdenticalIP(ipAddr);
         for(String thing:getThings(line)) {
             thing=cleanThing(thing); // let's make sure this is legal junk
             listOfThings.increment(thing);
-            String ipAddr = line.substring(0, line.indexOf(' '));
-            if(ipAddr.contains(",")) // host and proxy.  Just use host
-                ipAddr=ipAddr.substring(0, ipAddr.indexOf(','));
-            if(!ipAddr.contains("."))
-                return;  // no IP address
-            if(!dontConflateIPs)
-                ipAddr=getIdenticalIP(ipAddr);
             Counter<String> counter = longAddrs.get(ipAddr);
             if(counter==null)
                 counter=new Counter<>();
