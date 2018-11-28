@@ -165,7 +165,7 @@ public abstract class CountOfThingsByIP extends Analyzer {
     public void init(String[] args) {
         SimplerJSAP jsap;
         try {
-            jsap = new SimplerJSAP("[--debug] [-dontConflateIPs]");
+            jsap = new SimplerJSAP("[--debug] [--dontConflateIPs]");
         } catch (JSAPException ex) {
             throw new IllegalArgumentException(ex);
         }
