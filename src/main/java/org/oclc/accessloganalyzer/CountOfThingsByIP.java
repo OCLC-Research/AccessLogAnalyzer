@@ -37,7 +37,7 @@ public abstract class CountOfThingsByIP extends Analyzer {
     boolean debug;
     int maxThings=20;
     long otherCount;
-    private boolean debugGetIPData;
+    private boolean debugGetIPData, dontConflateIPs;
 
     public abstract List<String> getThings(String line);
     
@@ -51,7 +51,8 @@ public abstract class CountOfThingsByIP extends Analyzer {
                 ipAddr=ipAddr.substring(0, ipAddr.indexOf(','));
             if(!ipAddr.contains("."))
                 return;  // no IP address
-            ipAddr=getIdenticalIP(ipAddr);
+            if(!dontConflateIPs)
+                ipAddr=getIdenticalIP(ipAddr);
             Counter<String> counter = longAddrs.get(ipAddr);
             if(counter==null)
                 counter=new Counter<>();
@@ -164,11 +165,12 @@ public abstract class CountOfThingsByIP extends Analyzer {
     public void init(String[] args) {
         SimplerJSAP jsap;
         try {
-            jsap = new SimplerJSAP("[--debug]");
+            jsap = new SimplerJSAP("[--debug] [-dontConflateIPs]");
         } catch (JSAPException ex) {
             throw new IllegalArgumentException(ex);
         }
         JSAPResult config = jsap.parse(args);
+        dontConflateIPs=config.getBoolean("dontConflateIPs", false);
         debug=config.getBoolean("debug", false);
         if(debug)
             System.out.println(this.getClass().getSimpleName()+": debug=true");
