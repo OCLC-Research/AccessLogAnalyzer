@@ -21,6 +21,13 @@ public class Counter<T extends Comparable<T>> extends TreeMap<T, Long> {
 
     private static final long serialVersionUID = 1L;
 
+    public Long get(T key, long defaultValue) {
+        Long value=get(key);
+        if(value!=null)
+            return value;
+        return defaultValue;
+    }
+
     public Long increment(T key) {
         return increment(key, 1L);
     }
