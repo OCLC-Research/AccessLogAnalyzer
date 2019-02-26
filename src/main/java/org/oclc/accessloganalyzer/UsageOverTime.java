@@ -27,7 +27,7 @@ public class UsageOverTime extends Analyzer {
     protected int intervalSize;
     protected long total;
     protected long[] notBlacklistedUsage, usage;
-    private Pattern timePattern;
+    protected Pattern timePattern;
     private Date date;
     private boolean weekly;
     private boolean monthly;
