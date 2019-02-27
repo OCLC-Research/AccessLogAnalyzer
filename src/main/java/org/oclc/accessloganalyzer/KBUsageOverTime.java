@@ -17,6 +17,6 @@ public class KBUsageOverTime extends UsageOverTime {
     public void init(String[] args) {
         super.init(args);
         // timestamps normally have brackets around them, but someone has taken them off for the kb
-        timePattern=Pattern.compile("[^\\s]+- - [^:]+:(\\d{2}):(\\d{2})[\\w:/]+\\s[+\\-]\\d{4}");
+        timePattern=Pattern.compile("[^\\s]+\\s-\\s-\\s[^:]+:(\\d{2}):(\\d{2})[\\w:/]+\\s[+\\-]\\d{4}");
     }
 }
