@@ -81,7 +81,8 @@ public class AccessLogAnalyzer {
         String analyzerList=config.getString("analyzers", "");
         if(!analyzerList.isEmpty())
             analyzerList=analyzerList+",";
-        analyzerList=analyzerList+"UsageOverTime";
+        if(!analyzerList.contains("UsageOverTime"))
+            analyzerList=analyzerList+"UsageOverTime";
         String[] analyzerNames = analyzerList.split(",");
         
         logNameTemplate=config.getString("logNameTemplate", null);
