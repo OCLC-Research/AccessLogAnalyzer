@@ -5,7 +5,6 @@
  */
 package org.oclc.loganalyzer.accessloganalyzer;
 
-import org.oclc.loganalyzer.accessloganalyzer.AccessLogAnalyzer;
 import ORG.oclc.os.JSAP.SimplerJSAP;
 import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
@@ -55,6 +54,8 @@ public abstract class CountOfAccessLogThings extends AccessLogAnalyzer {
         }
         JSAPResult config = jsap.parse(args);
         debug=config.getBoolean("debug", false);
+        if(debug)
+            System.out.println("debug enabled for CountOfAccessLogThings");
     }
 
     @Override
