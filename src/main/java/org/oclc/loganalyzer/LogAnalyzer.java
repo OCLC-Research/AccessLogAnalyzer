@@ -135,16 +135,16 @@ public class LogAnalyzer {
                             SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd");
                             if(todaysRemoteLogNameTemplate!=null && sdf.format(new Date()).equals(sdf.format(date))) {
                                 String todaysRemoteLogName=new SimpleDateFormat(todaysRemoteLogNameTemplate).format(date);
-                                if(!getLog(todaysRemoteLogName, todaysLog, date)) {
+                                if(!getLog(todaysRemoteLogName, todaysLog)) {
                                     System.out.println("Nothing to report");
                                     return;
                                 }
                             }
                             else {
                                 String remoteLogName=new SimpleDateFormat(remoteLogNameTemplate).format(date);
-                                if(!getLog(remoteLogName, todaysLog, date)) { // try gzipped
-                                    if(!getLog(remoteLogName+".gz", todaysLog, date)) {
-                                        if(!getLog(remoteLogName+".lzo", todaysLog, date)) {
+                                if(!getLog(remoteLogName, todaysLog)) { // try gzipped
+                                    if(!getLog(remoteLogName+".gz", todaysLog)) {
+                                        if(!getLog(remoteLogName+".lzo", todaysLog)) {
                                             System.out.println("Nothing to report");
                                             return;
                                         }
@@ -354,7 +354,7 @@ public class LogAnalyzer {
         return name;
     }
 
-    private boolean getLog(String remoteLogName, String logName, Date date) throws MalformedURLException, FileNotFoundException, IOException {
+    private boolean getLog(String remoteLogName, String logName) throws MalformedURLException, FileNotFoundException, IOException {
         System.out.println("trying for "+remoteLogName);
         URL website = new URL(remoteLogName);
         InputStream stream;
